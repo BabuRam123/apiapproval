@@ -1,111 +1,61 @@
 using Microsoft.AspNetCore.Mvc;
 
+
 namespace ApprovalProcess.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class EmployeeController : ControllerBase
 {
      private readonly StoredProcedureExecutorService _StoredProcedureExecutorService;
-private readonly ILogger<EmployeeController> _logger;
-
+     private readonly string connectionString;  
    
-    public EmployeeController(ILogger<EmployeeController> logger)
+    public EmployeeController(IConfiguration configuration)
     {
-         _logger = logger;
-        _StoredProcedureExecutorService = new StoredProcedureExecutorService();
+        connectionString = configuration.GetConnectionString("DB_Dev");
+        _StoredProcedureExecutorService = new StoredProcedureExecutorService(connectionString);
     }
 
-        [HttpGet("EmployeeByUserID")]
-        public IActionResult GetData(int userid)
-        {
-            try
-            {
-                 var parameters = new Dictionary<string, object>
+    [HttpGet("EmployeeByUserID")]
+    public IActionResult GetData(int userid)
+    {
+        try{       
+        
+        var parameters = new Dictionary<string, object>
         {
             
             { "@userid", userid }
             // Add other parameters as needed
         };
-                var (employees, departments) = _StoredProcedureExecutorService.CallStoredProcedureWithMultipleResults("getEmployeesByUser",parameters);
+        // Execute the stored procedure and dynamically assign the result to models
+        var results = _StoredProcedureExecutorService.ExecuteStoredProcedure("getEmployeesByUser",parameters,typeof(Employee), typeof(Department));
+            
 
-                if (employees.Count == 0)
-                {
-                    return NotFound("No employees found.");
-                }
-
-                if (departments.Count == 0)
-                {
-                    return NotFound("No departments found.");
-                }
-
-                return Ok(new { Employees = employees, Departments = departments });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+        // Accessing the results
+        List<Employee> employee = MapResultSet<Employee>(results[0]);
+        List<Department> department = MapResultSet<Department>(results[1]);
+        if (employee.Count == 0 && department.Count == 0)
+        {
+            return NotFound("No employee,department found.");
         }
-    
+         return Ok(new { FirstResult = employee, SecondResult = department });
+        }
+        catch (Exception ex)
+        {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+      
+       
+    }
 
+     private List<T> MapResultSet<T>(List<object> resultSet)
+        {
+            List<T> resultList = new List<T>();
+            foreach (var item in resultSet)
+            {
+                resultList.Add((T)item);
+            }
+            return resultList;
+        }
 
-//     [HttpGet("AllEmployee")]
-//     public IActionResult Get()
-//     {
-//         var results =_StoredProcedureExecutorService.ExecuteStoredProc("getEmployees", MapFunction);
-//         return Ok(results);
-//     }
-
-//      [HttpGet("EmployeeByName")]
-//     public IActionResult GetEmployeeByName(string name)
-//     {
-//         var parameters = new Dictionary<string, object>
-//         {
-            
-//             { "@empname", name }
-//             // Add other parameters as needed
-//         };
-//         var results =_StoredProcedureExecutorService.ExecuteStoredProcWithParams("getEmployeesByName", MapFunction,parameters);
-//         return Ok(results);
-//     }
-
-// [HttpPost("InsertEmployee")]
-//    public IActionResult Post([FromBody] Employee data)
-//     {
-//          var parameters = new Dictionary<string, object>
-//         {
-            
-//             { "@empname", data.Id.ToString() },
-//             { "@empaddress", data.Name.ToString() }
-//             // Add other parameters as needed
-//         };
-//          var sqlParameters = new List<System.Data.SqlClient.SqlParameter>();
-//         foreach (var param in parameters)
-//         {
-//             sqlParameters.Add(new System.Data.SqlClient.SqlParameter(param.Key, param.Value));
-//         }
-
-//         var rowsAffected = _StoredProcedureExecutorService.ExecuteNonQueryStoredProcedure("InsertEmployees", parameters);
-
-//         if (rowsAffected > 0)
-//         {
-//             return Ok("Data inserted successfully!");
-//         }
-//         else
-//         {
-//             return BadRequest("Failed to insert data!");
-//         }
-//     }
-
-//     private Employee MapFunction(System.Data.IDataReader reader)
-//     {
-//         // Map data from IDataRecord to YourModel
-
-//         var model = new Employee
-//         {
-//             Id =  reader["name"].ToString() ,
-//             Name = reader["address"].ToString()
-//             // Map other properties accordingly
-//         };
-//         return model;
-//     }
+       
 }

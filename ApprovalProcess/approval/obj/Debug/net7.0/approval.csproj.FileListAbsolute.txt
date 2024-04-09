@@ -36,3 +36,4 @@ C:\mine3\approvalProcess\approval\obj\Debug\net7.0\refint\approval.dll
 C:\mine3\approvalProcess\approval\obj\Debug\net7.0\approval.pdb
 C:\mine3\approvalProcess\approval\obj\Debug\net7.0\approval.genruntimeconfig.cache
 C:\mine3\approvalProcess\approval\obj\Debug\net7.0\ref\approval.dll
+C:\mine3\approvalProcess\approval\obj\Debug\net7.0\approval.sourcelink.json
